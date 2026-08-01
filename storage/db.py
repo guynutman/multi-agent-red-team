@@ -88,9 +88,10 @@ class Storage:
     ) -> int:
         """Insert an attempt row. Returns the new attempt's id."""
         cursor = self.conn.execute(
-            "INSERT INTO attempts (campaign_id, sub_agent_type, payload, target_context, target_response, retries) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (campaign_id, sub_agent_type, payload, target_context, target_response, retries)
+            "INSERT INTO attempts (campaign_id, sub_agent_type, payload, target_context, "
+            "target_response, retries, attempted_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (campaign_id, sub_agent_type, payload, target_context, target_response, retries, now_iso()),
         )
         self.conn.commit()
         return cursor.lastrowid
@@ -103,9 +104,9 @@ class Storage:
     ) -> int:
         """Insert a judgment row. Returns the new judgment's id."""
         cursor = self.conn.execute(
-            "INSERT INTO judgments (attempt_id, verdict, reasoning) "
-            "VALUES (?, ?, ?)",
-            (attempt_id, verdict, reasoning)
+            "INSERT INTO judgments (attempt_id, verdict, reasoning, judged_at) "
+            "VALUES (?, ?, ?, ?)",
+            (attempt_id, verdict, reasoning, now_iso())
         )
         self.conn.commit()
         return cursor.lastrowid
