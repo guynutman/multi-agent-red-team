@@ -31,7 +31,7 @@ class OllamaBackend:
             },
         }
         
-        started = time.mono  tonic()
+        started = time.monotonic()
         last_error: Exception | None = None
         
         for attempt in range(self.max_retries):
