@@ -2,9 +2,9 @@
 
 import logging
 
-from llm.gemini import GeminiBackend
 from llm.ollama import OllamaBackend
 from subagents.basic import BasicInjectionSubAgent
+from subagents.external import ExternalInjectionSubAgent
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -24,8 +24,19 @@ def test_basic_generate():
     # basic direct injection should have no wrapping context
     assert spec.context is None
     
-    
+def test_external_generate():
+    attacker = OllamaBackend(model="dolphin-mistral")
+    agent = ExternalInjectionSubAgent(attacker_backend=attacker)
+    spec = agent.generate()
+    context_preview = spec.context[:200] if spec.context else None
+    print(f"[External] payload={spec.payload!r}")
+    print(f"[External] context (first 200)={context_preview!r}")
+    print(f"[External] criterion={spec.success_criterion!r}")
+    assert spec.payload
+    assert spec.context  # external MUST have wrapping context
+    assert spec.success_criterion
     
 if __name__ == "__main__":
     test_basic_generate()
-    print("BasicInjectionSubAgent OK.")
+    test_external_generate()
+    print("Sub-agents OK.")
