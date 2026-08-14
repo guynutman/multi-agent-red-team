@@ -110,7 +110,14 @@ class Storage:
         )
         self.conn.commit()
         return cursor.lastrowid
-        
+    
+    def get_campaign(self, campaign_id: int) -> dict:
+        cursor = self.conn.execute("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
+        row = cursor.fetchone()
+        if row is None:
+                raise ValueError(f"No campaign with id {campaign_id}")
+        return dict(row)
+
     def get_campaign_attempts(self, campaign_id: int) -> list[dict]:
         """Return all attempts + their judgments for a campaign, joined."""
         cursor = self.conn.execute(
