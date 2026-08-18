@@ -78,7 +78,7 @@ class Orchestrator:
                         "attempt %d/%d type=%s failed: %s",
                         attempt + 1, budget, subagent.sub_agent_type, e,
                     )
-                    self.storage.finish_campaign(campaign_id, "completed")
+            self.storage.finish_campaign(campaign_id, "completed")
         except Exception as e:
             logger.error("Campaign failed: %s", e)
             self.storage.finish_campaign(campaign_id, "aborted")

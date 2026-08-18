@@ -14,9 +14,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
 ]
 
-[project.scripts]
-multi-agent-red-team = "multi_agent_red_team:main"
-
-[build-system]
-requires = ["uv_build>=0.12.0,<0.13.0"]
-build-backend = "uv_build"
+[tool.uv]
+# Flat layout: modules live at the repo root, so there is nothing to build.
+package = false
