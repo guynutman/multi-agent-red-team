@@ -24,13 +24,14 @@ class SubAgent(ABC):
         """Produce one attack spec."""
         ...
     
-    def _parse_spec(self, text: str) -> InjectionSpec:
-        """Extract and validate an InjectionSpec from an LLM response."""
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
-            cleaned = cleaned.rsplit("```", 1)[0]
-        cleaned = cleaned.strip()
+def _parse_spec(self, text: str) -> InjectionSpec:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
+        cleaned = cleaned.rsplit("```", 1)[0]
+    cleaned = cleaned.strip()
+    # NEW: strip control characters (except \n, \r, \t) that break JSON parsing
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", cleaned)
 
         if not cleaned.startswith("{"):
             raise ValueError(
