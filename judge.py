@@ -1,4 +1,5 @@
 from typing import Literal
+import re
 from pydantic import BaseModel
 from llm.base import LLMBackend, Message
 from llm.entry import call_llm
@@ -68,7 +69,8 @@ class Judge:
             cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
             cleaned = cleaned.rsplit("```", 1)[0]
         cleaned = cleaned.strip()
-        
+
+        cleaned = re.sub(r"[\x00-\x1f]", "", cleaned)
         if not cleaned.startswith("{"):
             raise ValueError(
                 f"Judge LLM did not return JSON (likely a refusal). "
