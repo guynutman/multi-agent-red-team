@@ -1,7 +1,9 @@
 # multi-agent-red-team
 
-A multi-agent LLM red-teaming system that probes a target model for prompt-injection vulnerabilities. Built from scratch (no agent frameworks like LangChain or AutoGen) as a learning project and portfolio artifact.
+[![CI](https://github.com/guynutman/multi-agent-red-team/actions/workflows/ci.yml/badge.svg)](https://github.com/guynutman/multi-agent-red-team/actions/workflows/ci.yml)
 
+
+A multi-agent LLM red-teaming system that probes a target model for prompt-injection vulnerabilities. Built from scratch (no agent frameworks like LangChain or AutoGen) as a learning project and portfolio artifact.
 ## Overview
 
 An **orchestrator** dispatches specialized **sub-agents** to attempt prompt-injection attacks against a target LLM. Each attempt is judged for success and logged to SQLite. At the end of a campaign, a structured Markdown report summarizes findings.
