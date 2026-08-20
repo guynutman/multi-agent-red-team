@@ -20,13 +20,13 @@ jobs:
           version: "latest"
 
       - name: Set up Python
-        run: uv python install 3.11
+        run: uv python install 3.14
 
       - name: Install dependencies
         run: uv sync
 
-      - name: Run storage tests
-        run: uv run python -m tests.test_storage
+      - name: Run offline tests
+        run: uv run python -m tests.test_report
 
       # NOTE: test_backends, test_subagents, and test_judge require a running
       # Ollama server and are skipped in CI. They run locally during dev.

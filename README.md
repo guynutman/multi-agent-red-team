@@ -56,7 +56,7 @@ Every arrow above is a function call. No component talks directly to a provider'
 
 ## Tech Stack
 
-- Python 3.10+
+- Python 3.14+
 - `httpx` — HTTP client for LLM API calls
 - `pydantic` — structured output validation
 - `sqlite3` — storage (stdlib)
@@ -69,7 +69,7 @@ Every arrow above is a function call. No component talks directly to a provider'
 
 ### Prerequisites
 
-- **Python 3.10+** and **[uv](https://astral.sh/uv)** installed
+- **Python 3.14+** and **[uv](https://astral.sh/uv)** installed
 - **[Ollama](https://ollama.com/download)** installed and running locally
 - **~10 GB free disk** for both models (`llama3:8b` ≈ 5 GB, `dolphin-mistral` ≈ 4 GB)
 - **~12 GB RAM** if running both models loaded simultaneously; if less, run with a single Ollama model and reuse it for both attacker and target
