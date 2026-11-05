@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
     sub_agent_type TEXT NOT NULL,
+    owasp_category TEXT,
     payload TEXT NOT NULL,
     target_context TEXT,
     target_response TEXT NOT NULL,
@@ -50,8 +51,15 @@ class Storage:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.conn.commit()
         
+    def _migrate(self) -> None:
+        """Add columns introduced after v1 to databases created before them."""
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(attempts)")}
+        if "owasp_category" not in cols:
+            self.conn.execute("ALTER TABLE attempts ADD COLUMN owasp_category TEXT")
+
     def create_campaign(
         self,
         name: str,
@@ -85,13 +93,15 @@ class Storage:
         target_context: str | None,
         target_response: str,
         retries: int, 
+        owasp_category: str | None = None,
     ) -> int:
         """Insert an attempt row. Returns the new attempt's id."""
         cursor = self.conn.execute(
-            "INSERT INTO attempts (campaign_id, sub_agent_type, payload, target_context, "
-            "target_response, retries, attempted_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (campaign_id, sub_agent_type, payload, target_context, target_response, retries, now_iso()),
+            "INSERT INTO attempts (campaign_id, sub_agent_type, owasp_category, payload, "
+            "target_context, target_response, retries, attempted_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (campaign_id, sub_agent_type, owasp_category, payload, target_context,
+             target_response, retries, now_iso()),
         )
         self.conn.commit()
         return cursor.lastrowid

@@ -4,6 +4,7 @@ import os
 from collections import Counter, defaultdict
 
 from storage.db import Storage
+from taxonomy import OWASP_LLM_TOP10
 
 MAX_TEXT_CHARS = 2000
 
@@ -24,6 +25,7 @@ def generate_report(
     lines.extend(_render_header(campaign, attempts))
     lines.extend(_render_summary(attempts))
     lines.extend(_render_by_subagent(attempts))
+    lines.extend(_render_owasp_coverage(attempts))
     lines.extend(_render_successes(attempts))
     lines.extend(_render_full_log(attempts))
 
@@ -108,6 +110,39 @@ def _render_by_subagent(attempts: list[dict]) -> list[str]:
     return lines
 
 
+def _render_owasp_coverage(attempts: list[dict]) -> list[str]:
+    """One row per OWASP LLM Top 10 category, so untested categories are visible gaps."""
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for a in attempts:
+        grouped[a.get("owasp_category") or "untagged"].append(a)
+
+    lines = [
+        "## OWASP LLM Top 10 (2025) Coverage",
+        "",
+        "| Category | Name | Attempts | Success | Success rate |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for cat in OWASP_LLM_TOP10.values():
+        group = grouped.pop(cat.id, [])
+        if group:
+            successes = _verdict_counts(group).get("success", 0)
+            lines.append(
+                f"| {cat.id} | {cat.name} | {len(group)} | {successes} | "
+                f"{successes / len(group):.1%} |"
+            )
+        else:
+            lines.append(f"| {cat.id} | {cat.name} | 0 | — | not tested |")
+    for other in sorted(grouped):  # untagged (pre-taxonomy rows) or unknown ids
+        group = grouped[other]
+        successes = _verdict_counts(group).get("success", 0)
+        lines.append(
+            f"| {other} | — | {len(group)} | {successes} | {successes / len(group):.1%} |"
+        )
+    tested = sum(1 for c in OWASP_LLM_TOP10 if any(a.get("owasp_category") == c for a in attempts))
+    lines += ["", f"*{tested} of {len(OWASP_LLM_TOP10)} categories exercised.*", ""]
+    return lines
+
+
 def _render_successes(attempts: list[dict]) -> list[str]:
     successes = [a for a in attempts if a["verdict"] == "success"]
     lines = ["## Successful Attacks", ""]
@@ -129,7 +164,8 @@ def _render_full_log(attempts: list[dict]) -> list[str]:
 
 def _render_attempt(attempt: dict) -> list[str]:
     lines = [
-        f"### Attempt {attempt['id']} — `{attempt['sub_agent_type']}` — "
+        f"### Attempt {attempt['id']} — `{attempt['sub_agent_type']}`"
+        f"{' (' + attempt['owasp_category'] + ')' if attempt.get('owasp_category') else ''} — "
         f"**{attempt['verdict'] or 'unjudged'}**",
         "",
         f"*Attempted at {attempt['attempted_at']} (retries: {attempt['retries']})*",

@@ -44,6 +44,7 @@ class ExternalInjectionSubAgent(SubAgent):
     """
     
     sub_agent_type: str = "external_indirect"
+    owasp_category: str = "LLM01"  # Prompt Injection
     
     def generate(self) -> InjectionSpec:
         system_mes: Message = {"role": "system", "content": ATTACKER_SYSTEM}

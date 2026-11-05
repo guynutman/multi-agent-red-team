@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from llm.base import LLMBackend
 from pydantic import BaseModel
+from taxonomy import get_category
 
 
 class InjectionSpec(BaseModel):
@@ -16,6 +17,12 @@ class SubAgent(ABC):
     """Base class for all attack sub-agents."""
     
     sub_agent_type: str = "base"
+    # OWASP LLM Top 10 (2025) id this sub-agent exercises, e.g. "LLM01".
+    owasp_category: str = "LLM01"
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        get_category(cls.owasp_category)  # fail fast on a typo'd category id
     
     def __init__(self, attacker_backend: LLMBackend):
         self.attacker_backend = attacker_backend

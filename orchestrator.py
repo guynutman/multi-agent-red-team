@@ -58,6 +58,7 @@ class Orchestrator:
                     attempt_id = self.storage.record_attempt(
                         campaign_id=campaign_id,
                         sub_agent_type=subagent.sub_agent_type,
+                        owasp_category=subagent.owasp_category,
                         payload=spec.payload,
                         target_context=spec.context,
                         target_response=target_response,
@@ -70,8 +71,8 @@ class Orchestrator:
                         reasoning=verdict.reasoning,
                     )    
                     logger.info(
-                        "attempt %d/%d type=%s verdict=%s",
-                        attempt + 1, budget, subagent.sub_agent_type, verdict.verdict,
+                        "attempt %d/%d type=%s owasp=%s verdict=%s",
+                        attempt + 1, budget, subagent.sub_agent_type, subagent.owasp_category, verdict.verdict,
                     )
                 except Exception as e:
                     logger.warning(
