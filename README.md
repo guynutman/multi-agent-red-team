@@ -277,7 +277,7 @@ CREATE TABLE IF NOT EXISTS judgments (
 - Judge is LLM-based and can misclassify — an eval pass with hand-labeled outcomes is planned to measure agreement.
 - Heuristic (round-robin) orchestration doesn't learn from failures over time.
 - No true novelty detection — rediscovers known attack patterns rather than finding new categories.
-- Target is a bare LLM, not an agentic system with tools. LLM01/02/06/07 are exercised. Tools are sandboxed fakes, so downstream categories (SSRF, SQLi, RCE, XSS from LLM05) are not yet tested against real side effects.
+- LLM01/02/06/07 are exercised. Tools are sandboxed fakes, so downstream categories (SSRF, SQLi, RCE, XSS from LLM05) are not yet tested against real side effects.
 
 ## Roadmap
 
