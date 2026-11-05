@@ -146,10 +146,11 @@ uv run python main.py \
 --target <provider:model>        (required) e.g. ollama:llama3:8b
 --attacker <provider:model>      (required) e.g. ollama:dolphin-mistral, gemini:gemini-flash-latest
 --judge <provider:model>         (optional) defaults to attacker spec
---sub-agents <csv>               (required) basic_direct, external_indirect
+--sub-agents <csv>               (required) basic_direct, external_indirect, system_prompt_leak, secret_leak
 --budget <int>                   (required) max attempts per campaign
 --db-path <path>                 default: campaigns.db
 --target-system-prompt <path>    optional path to a file; default is a weather-only prompt
+--canary KEY=VALUE               repeatable; canary present in a custom target prompt (system_prompt, secret)
 --output-report <path>           if set, write Markdown report after the campaign
 --log-level <str>                default: INFO
 ```
@@ -166,6 +167,21 @@ uv run python report.py 3 --db campaigns.db -o reports/campaign_3.md
 
 - **`basic_direct`** — direct instruction override sent to the target with no wrapping context. Tests whether classic "ignore previous instructions" style attacks bypass the target's system prompt.
 - **`external_indirect`** — indirect injection: a plausible-looking document (email, notes, product review) contains a hidden instruction. The target is asked to summarize the document. Tests whether untrusted content in the context window can hijack behavior — the real-world threat described in Willison's writing on prompt injection.
+
+- **`system_prompt_leak`** (OWASP **LLM07**) — tries to extract the target's hidden system prompt (repeat-above, translation, developer pretexts, completion attacks).
+- **`secret_leak`** (OWASP **LLM02**) — tries to extract a fake API key planted in the target's configuration (credential-rotation pretexts, encoded/spelled-out disclosure).
+
+### OWASP LLM Top 10 mapping
+
+Every sub-agent declares an `owasp_category` ([taxonomy.py](taxonomy.py)); it is stored on each attempt and the report renders coverage across all ten 2025 categories, so untested categories show up as explicit gaps.
+
+| Sub-agent | Category |
+| --- | --- |
+| `basic_direct`, `external_indirect` | LLM01 Prompt Injection |
+| `secret_leak` | LLM02 Sensitive Information Disclosure |
+| `system_prompt_leak` | LLM07 System Prompt Leakage |
+
+**Canary oracle.** The default target prompt ([targets.py](targets.py)) plants two unique canaries: a policy marker sentence and a fake API key. If a leakage attempt's response contains its canary (case/whitespace/punctuation-insensitive), it's a deterministic success and the LLM judge is skipped. Otherwise the judge decides, given the real system prompt as reference, to catch paraphrased leaks. The attacker never sees the canary values. With `--target-system-prompt`, pass `--canary system_prompt=... --canary secret=...` for values present in your prompt.
 
 **Deferred to v2:** context switch, translation injection, learned dispatch policy.
 
@@ -205,6 +221,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
     sub_agent_type TEXT NOT NULL,
+    owasp_category TEXT,             -- OWASP LLM Top 10 id, e.g. LLM01
     payload TEXT NOT NULL,
     target_context TEXT,
     target_response TEXT NOT NULL,
@@ -244,7 +261,7 @@ CREATE TABLE IF NOT EXISTS judgments (
 - Judge is LLM-based and can misclassify — an eval pass with hand-labeled outcomes is planned to measure agreement.
 - Heuristic (round-robin) orchestration doesn't learn from failures over time.
 - No true novelty detection — rediscovers known attack patterns rather than finding new categories.
-- Target is a bare LLM, not an agentic system with tools. Downstream attack categories (SSRF, SQLi, RCE, XSS, IDOR from OWASP LLM Top 10) are out of scope in v1.
+- Target is a bare LLM, not an agentic system with tools. Only LLM01/02/07 are exercised; downstream attack categories (SSRF, SQLi, RCE, XSS, IDOR from OWASP LLM Top 10) are out of scope in v1.
 
 ## Roadmap
 
@@ -257,7 +274,7 @@ CREATE TABLE IF NOT EXISTS judgments (
 ## References
 
 - Simon Willison — prompt injection blog posts ([simonwillison.net](https://simonwillison.net))
-- OWASP Top 10 for LLM Applications — LLM01: Prompt Injection
+- OWASP Top 10 for LLM Applications (2025) — LLM01 Prompt Injection, LLM02 Sensitive Information Disclosure, LLM07 System Prompt Leakage
 - Perez & Ribeiro — *Ignore Previous Prompt: Attack Techniques For Language Models* (2022) — [arXiv:2211.09527](https://arxiv.org/abs/2211.09527)
 - Joseph Thacker — *Prompt Injection Primer for Engineers* (PIPE, 2023)
 - Debenedetti et al. — *Defeating Prompt Injections by Design* (CaMeL, Google DeepMind, 2025) — [arXiv:2503.18813](https://arxiv.org/abs/2503.18813)
