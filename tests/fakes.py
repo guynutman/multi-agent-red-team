@@ -13,6 +13,6 @@ class FakeBackend:
         self.calls: list[list[Message]] = []
 
     def call(self, messages: list[Message], **config) -> LLMResponse:
-        self.calls.append(messages)
+        self.calls.append(list(messages))  # snapshot: callers mutate the list
         text = self.reply(messages) if callable(self.reply) else self.reply
         return LLMResponse(text=text, raw={}, retries=0, latency_ms=0)

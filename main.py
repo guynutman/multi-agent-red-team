@@ -10,6 +10,7 @@ from llm.ollama import OllamaBackend
 from orchestrator import Orchestrator
 from storage.db import Storage
 from subagents.base import SubAgent
+from subagents.agentic import ToolHijackSubAgent
 from subagents.basic import BasicInjectionSubAgent
 from subagents.external import ExternalInjectionSubAgent
 from subagents.leakage import SensitiveInfoDisclosureSubAgent, SystemPromptLeakageSubAgent
@@ -20,6 +21,7 @@ SUBAGENT_REGISTRY: dict[str, type[SubAgent]] = {
     "external_indirect": ExternalInjectionSubAgent,
     "system_prompt_leak": SystemPromptLeakageSubAgent,
     "secret_leak": SensitiveInfoDisclosureSubAgent,
+    "tool_hijack": ToolHijackSubAgent,
 }
 
 
@@ -87,6 +89,7 @@ def parse_args() -> argparse.Namespace:
         "--canary", action="append", metavar="KEY=VALUE",
         help="Canary planted in a custom target prompt (keys: system_prompt, secret). Repeatable.",
     )
+    parser.add_argument("--max-tool-steps", type=int, default=4, help="Agent-loop step cap for tool-using sub-agents.")
     parser.add_argument("--output-report", default=None, help="If set, write Markdown report here.")
     parser.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR, CRITICAL.")
     return parser.parse_args()
@@ -125,6 +128,7 @@ def main() -> None:
             judge=judge,
             storage=storage,
             canaries=canaries,
+            max_tool_steps=args.max_tool_steps,
         )
         campaign_id = orch.run_campaign(
             name=args.campaign_name,

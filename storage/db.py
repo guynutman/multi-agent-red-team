@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     target_context TEXT,
     target_response TEXT NOT NULL,
     retries INTEGER NOT NULL DEFAULT 0,
+    tool_trace TEXT,
     attempted_at TEXT NOT NULL
 );
 
@@ -57,8 +58,9 @@ class Storage:
     def _migrate(self) -> None:
         """Add columns introduced after v1 to databases created before them."""
         cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(attempts)")}
-        if "owasp_category" not in cols:
-            self.conn.execute("ALTER TABLE attempts ADD COLUMN owasp_category TEXT")
+        for col in ("owasp_category", "tool_trace"):
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE attempts ADD COLUMN {col} TEXT")
 
     def create_campaign(
         self,
@@ -94,14 +96,15 @@ class Storage:
         target_response: str,
         retries: int, 
         owasp_category: str | None = None,
+        tool_trace: str | None = None,
     ) -> int:
         """Insert an attempt row. Returns the new attempt's id."""
         cursor = self.conn.execute(
             "INSERT INTO attempts (campaign_id, sub_agent_type, owasp_category, payload, "
-            "target_context, target_response, retries, attempted_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "target_context, target_response, retries, tool_trace, attempted_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (campaign_id, sub_agent_type, owasp_category, payload, target_context,
-             target_response, retries, now_iso()),
+             target_response, retries, tool_trace, now_iso()),
         )
         self.conn.commit()
         return cursor.lastrowid

@@ -1,5 +1,6 @@
 """Markdown report generator for a finished campaign."""
 
+import json
 import os
 from collections import Counter, defaultdict
 
@@ -177,6 +178,15 @@ def _render_attempt(attempt: dict) -> list[str]:
     ]
     if attempt["target_context"]:
         lines += ["**Injected context**", "", _fence(attempt["target_context"]), ""]
+    if attempt.get("tool_trace"):
+        lines += ["**Tool calls**", ""]
+        calls = json.loads(attempt["tool_trace"])
+        if not calls:
+            lines.append("(none)")
+        for i, c in enumerate(calls, 1):
+            outcome = f"error: {c['error']}" if c["error"] else _truncate(c["result"], 200).replace("\n", " ⏎ ")
+            lines.append(f"{i}. `{c['name']}` `{json.dumps(c['arguments'])[:300]}` → {outcome}")
+        lines.append("")
     lines += ["**Target response**", "", _fence(attempt["target_response"]), ""]
     if attempt["reasoning"]:
         lines += ["**Judge reasoning**", "", attempt["reasoning"], ""]

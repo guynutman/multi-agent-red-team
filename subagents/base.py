@@ -22,6 +22,9 @@ class SubAgent(ABC):
     # Key into the orchestrator's canary map. When set, a response containing that
     # canary is a deterministic success (used by leakage agents: LLM02, LLM07).
     canary_key: str | None = None
+    # When True, the target runs as a tool-using agent (tools.py) and success is
+    # judged from its tool-call trace (used by LLM06 agents).
+    uses_tools: bool = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
