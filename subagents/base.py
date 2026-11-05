@@ -19,6 +19,9 @@ class SubAgent(ABC):
     sub_agent_type: str = "base"
     # OWASP LLM Top 10 (2025) id this sub-agent exercises, e.g. "LLM01".
     owasp_category: str = "LLM01"
+    # Key into the orchestrator's canary map. When set, a response containing that
+    # canary is a deterministic success (used by leakage agents: LLM02, LLM07).
+    canary_key: str | None = None
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
