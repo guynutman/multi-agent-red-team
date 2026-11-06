@@ -70,7 +70,7 @@ class Judge:
             cleaned = cleaned.rsplit("```", 1)[0]
         cleaned = cleaned.strip()
 
-        cleaned = re.sub(r"[\x00-\x1f]", "", cleaned)
+        cleaned = re.sub(r"[\x00-\x1f]", " ", cleaned)
         if not cleaned.startswith("{"):
             raise ValueError(
                 f"Judge LLM did not return JSON (likely a refusal). "

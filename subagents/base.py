@@ -44,8 +44,9 @@ class SubAgent(ABC):
             cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
             cleaned = cleaned.rsplit("```", 1)[0]
         cleaned = cleaned.strip()
-        # NEW: strip control characters (except \n, \r, \t) that break JSON parsing
-        cleaned = re.sub(r"[\x00-\x1f]", "", cleaned)
+        # Raw control chars (incl. newlines inside strings) are invalid JSON; small
+        # models emit them often. Replace with a space so words don't run together.
+        cleaned = re.sub(r"[\x00-\x1f]", " ", cleaned)
         
         if not cleaned.startswith("{"):
             raise ValueError(
