@@ -16,6 +16,7 @@ from subagents.external import ExternalInjectionSubAgent
 from subagents.consumption import UnboundedConsumptionSubAgent
 from subagents.misinformation import SycophancyMisinformationSubAgent
 from subagents.multiturn import CrescendoLeakSubAgent
+from subagents.output_handling import OutputHandlingSubAgent
 from subagents.rag_poisoning import RagPoisoningSubAgent
 from subagents.leakage import SensitiveInfoDisclosureSubAgent, SystemPromptLeakageSubAgent
 from targets import DEFAULT_CANARIES, DEFAULT_TARGET_SYSTEM
@@ -30,6 +31,7 @@ SUBAGENT_REGISTRY: dict[str, type[SubAgent]] = {
     "rag_poisoning": RagPoisoningSubAgent,
     "sycophancy": SycophancyMisinformationSubAgent,
     "unbounded_output": UnboundedConsumptionSubAgent,
+    "output_handling": OutputHandlingSubAgent,
 }
 
 
