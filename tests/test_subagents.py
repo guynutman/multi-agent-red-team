@@ -1,10 +1,14 @@
-"""Smoke test for sub-agents. Run: uv run python -m tests.test_subagents"""
+"""Smoke test for sub-agents. Run: uv run pytest tests/test_subagents.py"""
 
 import logging
 
 from llm.ollama import OllamaBackend
 from subagents.basic import BasicInjectionSubAgent
 from subagents.external import ExternalInjectionSubAgent
+
+import pytest
+
+pytestmark = pytest.mark.ollama  # live-model test; auto-skipped without a server
 
 logging.basicConfig(
     level=logging.DEBUG,

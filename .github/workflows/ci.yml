@@ -26,7 +26,4 @@ jobs:
         run: uv sync
 
       - name: Run offline tests
-        run: uv run pytest -q tests/test_report.py tests/test_leakage.py tests/test_tools.py
-
-      # NOTE: test_backends, test_subagents, and test_judge require a running
-      # Ollama server and are skipped in CI. They run locally during dev.
+        run: uv run pytest -q   # Ollama-marked tests auto-skip in CI

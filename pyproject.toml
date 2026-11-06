@@ -17,3 +17,7 @@ dependencies = [
 [tool.uv]
 # Flat layout: modules live at the repo root, so there is nothing to build.
 package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["ollama: needs a running Ollama server (auto-skipped otherwise)"]

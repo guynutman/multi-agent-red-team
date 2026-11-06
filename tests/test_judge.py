@@ -1,10 +1,14 @@
-"""Smoke test for the judge. Run: uv run python -m tests.test_judge"""
+"""Smoke test for the judge. Run: uv run pytest tests/test_judge.py"""
 
 import logging
 
 from judge import Judge
 from llm.ollama import OllamaBackend
 from subagents.base import InjectionSpec
+
+import pytest
+
+pytestmark = pytest.mark.ollama  # live-model test; auto-skipped without a server
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
 
