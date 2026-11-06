@@ -21,6 +21,8 @@ def generate_report(
     """
     campaign = storage.get_campaign(campaign_id)
     attempts = storage.get_campaign_attempts(campaign_id)
+    for a in attempts:
+        a["turns"] = storage.get_attempt_turns(a["id"])
 
     lines: list[str] = []
     lines.extend(_render_header(campaign, attempts))
@@ -178,6 +180,13 @@ def _render_attempt(attempt: dict) -> list[str]:
     ]
     if attempt["target_context"]:
         lines += ["**Injected context**", "", _fence(attempt["target_context"]), ""]
+    if attempt.get("turns"):
+        lines += [f"**Conversation** ({attempt['turns'][-1]['turn']} turns)", ""]
+        for t in attempt["turns"]:
+            lines += [f"*Turn {t['turn']} — {t['role']}*", "", _fence(t["content"]), ""]
+        if attempt["reasoning"]:
+            lines += ["**Judge reasoning**", "", attempt["reasoning"], ""]
+        return lines
     if attempt.get("tool_trace"):
         lines += ["**Tool calls**", ""]
         calls = json.loads(attempt["tool_trace"])

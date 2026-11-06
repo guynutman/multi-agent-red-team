@@ -37,6 +37,15 @@ CREATE TABLE IF NOT EXISTS judgments (
     judged_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attempt_id INTEGER NOT NULL REFERENCES attempts(id),
+    turn INTEGER NOT NULL,
+    role TEXT NOT NULL,              -- 'attacker' | 'target'
+    content TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_turns_attempt ON turns(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_campaign ON attempts(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_subagent ON attempts(sub_agent_type);
 CREATE INDEX IF NOT EXISTS idx_judgments_attempt ON judgments(attempt_id);
@@ -124,6 +133,21 @@ class Storage:
         self.conn.commit()
         return cursor.lastrowid
     
+    def record_turns(self, attempt_id: int, turns: list[dict]) -> None:
+        """Persist a multi-turn conversation: dicts with turn, role, content."""
+        self.conn.executemany(
+            "INSERT INTO turns (attempt_id, turn, role, content) VALUES (?, ?, ?, ?)",
+            [(attempt_id, t["turn"], t["role"], t["content"]) for t in turns],
+        )
+        self.conn.commit()
+
+    def get_attempt_turns(self, attempt_id: int) -> list[dict]:
+        cursor = self.conn.execute(
+            "SELECT turn, role, content FROM turns WHERE attempt_id = ? ORDER BY id",
+            (attempt_id,),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
     def get_campaign(self, campaign_id: int) -> dict:
         cursor = self.conn.execute("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
         row = cursor.fetchone()

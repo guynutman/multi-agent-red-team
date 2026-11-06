@@ -13,6 +13,7 @@ from subagents.base import SubAgent
 from subagents.agentic import ToolHijackSubAgent
 from subagents.basic import BasicInjectionSubAgent
 from subagents.external import ExternalInjectionSubAgent
+from subagents.multiturn import CrescendoLeakSubAgent
 from subagents.leakage import SensitiveInfoDisclosureSubAgent, SystemPromptLeakageSubAgent
 from targets import DEFAULT_CANARIES, DEFAULT_TARGET_SYSTEM
 
@@ -22,6 +23,7 @@ SUBAGENT_REGISTRY: dict[str, type[SubAgent]] = {
     "system_prompt_leak": SystemPromptLeakageSubAgent,
     "secret_leak": SensitiveInfoDisclosureSubAgent,
     "tool_hijack": ToolHijackSubAgent,
+    "crescendo_leak": CrescendoLeakSubAgent,
 }
 
 
@@ -89,6 +91,7 @@ def parse_args() -> argparse.Namespace:
         "--canary", action="append", metavar="KEY=VALUE",
         help="Canary planted in a custom target prompt (keys: system_prompt, secret). Repeatable.",
     )
+    parser.add_argument("--max-turns", type=int, default=4, help="Conversation length for multi-turn sub-agents.")
     parser.add_argument("--max-tool-steps", type=int, default=4, help="Agent-loop step cap for tool-using sub-agents.")
     parser.add_argument("--output-report", default=None, help="If set, write Markdown report here.")
     parser.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR, CRITICAL.")
@@ -109,6 +112,9 @@ def main() -> None:
     judge_backend = build_backend(args.judge) if args.judge else attacker_backend
 
     subagents = build_subagents(args.sub_agents, attacker_backend)
+    for sa in subagents:
+        if hasattr(sa, "max_turns"):
+            sa.max_turns = args.max_turns
     judge = Judge(judge_backend=judge_backend)
     target_system_prompt = load_target_system(args.target_system_prompt)
     canaries = parse_canaries(args.canary, custom_prompt=args.target_system_prompt is not None)

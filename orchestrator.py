@@ -6,6 +6,7 @@ from llm.entry import call_llm
 from judge import Judge, Verdict
 from storage.db import Storage
 from subagents.base import InjectionSpec, SubAgent
+from subagents.multiturn import MultiTurnSubAgent
 from tools import SIDE_EFFECT_TOOLS, ToolCall, ToolEnv, format_results, parse_tool_calls, render_tool_instructions
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,12 @@ class Orchestrator:
                 subagent = self.subagents[attempt % (len(self.subagents))]
                 try:
                     spec = subagent.generate()
-                    target_response, retries, trace = self._query_target(subagent, spec)
+                    turns: list[dict] = []
+                    if isinstance(subagent, MultiTurnSubAgent):
+                        target_response, retries, turns = self._run_multi_turn(subagent, spec)
+                        trace = None
+                    else:
+                        target_response, retries, trace = self._query_target(subagent, spec)
                     attempt_id = self.storage.record_attempt(
                         campaign_id=campaign_id,
                         sub_agent_type=subagent.sub_agent_type,
@@ -74,6 +80,8 @@ class Orchestrator:
                         retries=retries,
                         tool_trace=json.dumps(trace) if trace is not None else None,
                     )
+                    if turns:
+                        self.storage.record_turns(attempt_id, turns)
                     verdict = self._evaluate(subagent, spec, target_response, trace)
                     self.storage.record_judgment(
                         attempt_id=attempt_id,
@@ -96,6 +104,36 @@ class Orchestrator:
             raise
         return campaign_id
                         
+    def _run_multi_turn(
+        self, subagent: MultiTurnSubAgent, spec: InjectionSpec
+    ) -> tuple[str, int, list[dict]]:
+        """
+        Hold one adaptive conversation. The orchestrator owns the target-side history;
+        the sub-agent owns the attacker-side history. Stops early on a canary hit.
+        Returns (all target replies joined with turn markers, retries, turn log).
+        """
+        messages: list[Message] = [{"role": "system", "content": self.target_system_prompt}]
+        canary = self.canaries.get(subagent.canary_key or "")
+        turns: list[dict] = []
+        replies: list[str] = []
+        retries = 0
+        attacker_msg = spec.payload
+        for turn in range(1, subagent.max_turns + 1):
+            messages.append({"role": "user", "content": attacker_msg})
+            response = call_llm(messages, self.target_backend, temperature=0.7)
+            retries += response.retries
+            messages.append({"role": "assistant", "content": response.text})
+            turns += [
+                {"turn": turn, "role": "attacker", "content": attacker_msg},
+                {"turn": turn, "role": "target", "content": response.text},
+            ]
+            replies.append(f"[turn {turn}] {response.text}")
+            if canary and canary_in(canary, response.text):
+                break
+            if turn < subagent.max_turns:
+                attacker_msg = subagent.follow_up(response.text, turn + 1)
+        return "\n\n".join(replies), retries, turns
+
     def _evaluate(
         self,
         subagent: SubAgent,
