@@ -84,7 +84,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--attacker", required=True, help="Attacker model spec.")
     parser.add_argument("--judge", default=None, help="Judge model spec. Defaults to attacker.")
     parser.add_argument("--sub-agents", required=True, help="Comma-separated sub-agent names.")
-    parser.add_argument("--budget", type=int, required=True, help="Max attempts per campaign.")
+    budget = parser.add_mutually_exclusive_group(required=True)
+    budget.add_argument("--budget", type=int, help="Total attempts, dispatched round-robin.")
+    budget.add_argument("--trials-per-agent", type=int, help="Attempts per sub-agent (budget = this x #sub-agents).")
+    parser.add_argument("--workers", type=int, default=1, help="Concurrent attempts (set OLLAMA_NUM_PARALLEL >= this on the server).")
+    parser.add_argument("--seed", type=int, default=None, help="Base seed; attempt i uses seed+i for attacker and target.")
     parser.add_argument("--db-path", default="campaigns.db", help="SQLite database path.")
     parser.add_argument("--target-system-prompt", default=None, help="Path to target system prompt file.")
     parser.add_argument(
@@ -135,12 +139,14 @@ def main() -> None:
             storage=storage,
             canaries=canaries,
             max_tool_steps=args.max_tool_steps,
+            workers=args.workers,
+            seed=args.seed,
         )
         campaign_id = orch.run_campaign(
             name=args.campaign_name,
             target_model_name=args.target,
             attacker_model_name=args.attacker,
-            budget=args.budget,
+            budget=args.budget or args.trials_per_agent * len(subagents),
         )
         logger.info("Campaign %d complete", campaign_id)
         print(f"Campaign id: {campaign_id}")
