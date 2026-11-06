@@ -58,7 +58,10 @@ class GeminiBackend:
         max_output_tokens, response_mime_type.
         Anything else is ignored.
         """
-        url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        # Key goes in a header, not the URL: httpx error messages include the URL,
+        # and those messages end up in logs and RuntimeErrors.
+        url = f"{self.base_url}/models/{self.model}:generateContent"
+        headers = {"x-goog-api-key": self.api_key}
         
         contents, system_instruction = self._transform_messages(messages)
         generation_config = {
@@ -76,7 +79,7 @@ class GeminiBackend:
         for attempt in range(self.max_retries):
             try:
                 with httpx.Client(timeout=self.timeout_s) as client:
-                    resp = client.post(url, json=payload)
+                    resp = client.post(url, json=payload, headers=headers)
                     resp.raise_for_status() 
                 data = resp.json()
                 elapsed_ms = int((time.monotonic() - started) * 1000)
