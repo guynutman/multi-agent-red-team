@@ -68,10 +68,10 @@ def test_generate_report():
         text = out.read_text(encoding="utf-8")
 
     assert "# Red-Team Campaign Report: report_smoke" in text
-    assert "**1 of 6 attempts succeeded (16.7% success rate).**" in text
+    assert "**1 of 2 scored attempts succeeded: 50.0% [9.5%–90.5%]** (6 attempts run; 4 errored or unjudged)." in text
     assert "| unjudged | 4 |" in text   # attempts 3-6 never reached the judge
-    assert "| `basic_direct` | 4 | 1 | 0 | 0 | 25.0% |" in text
-    assert "| `external_indirect` | 2 | 0 | 1 | 0 | 0.0% |" in text
+    assert "| `basic_direct` | 4 | 1 | 0 | 0 | 3 | 100.0% [20.7%–100.0%] |" in text
+    assert "| `external_indirect` | 2 | 0 | 1 | 0 | 1 | 0.0% [0.0%–79.3%] |" in text
     assert "## Successful Attacks" in text
     assert "Response is exactly 'OWNED'." in text
     assert "(empty)" in text                          # empty target response
@@ -81,10 +81,11 @@ def test_generate_report():
     assert text.count("### Attempt") == 7             # 6 in the log + 1 success repeated
     # OWASP coverage: 2 tagged LLM01 rows, 4 untagged legacy rows, 9 gaps
     assert "## OWASP LLM Top 10 (2025) Coverage" in text
-    assert "| LLM01 | Prompt Injection | 2 | 1 | 50.0% |" in text
+    assert "| LLM01 | Prompt Injection | 2 | 1 | 50.0% [9.5%–90.5%] |" in text
     assert "| LLM07 | System Prompt Leakage | 0 | — | not tested |" in text
-    assert "| untagged | — | 4 | 0 | 0.0% |" in text
-    assert "*1 of 10 categories exercised.*" in text
+    assert "| untagged | — | 4 | 0 | n/a |" in text
+    assert "| LLM03 | Supply Chain | — | — | out of scope:" in text
+    assert "*1 of 8 black-box-testable categories exercised (2 out of scope).*" in text
     assert "`basic_direct` (LLM01) — **success**" in text
     assert text.endswith("\n") and not text.endswith("\n\n")
 
@@ -103,7 +104,7 @@ def test_empty_campaign():
         generate_report(storage, campaign_id, str(out))
         text = out.read_text(encoding="utf-8")
 
-    assert "**0 of 0 attempts succeeded (n/a success rate).**" in text
+    assert "**0 of 0 scored attempts succeeded: n/a**" in text
     assert "No attempts were recorded for this campaign." in text
     assert "| Finished |" in text
     storage.close()

@@ -5,6 +5,7 @@ import os
 from collections import Counter, defaultdict
 
 from storage.db import Storage
+from stats import fmt_rate
 from taxonomy import OWASP_LLM_TOP10
 
 MAX_TEXT_CHARS = 2000
@@ -66,21 +67,32 @@ def _render_header(campaign: dict, attempts: list[dict]) -> list[str]:
     ]
 
 
+def _scored(attempts: list[dict]) -> list[dict]:
+    """Attempts that reached a verdict (excludes errors and unjudged): the rate denominator."""
+    return [a for a in attempts if a["verdict"] in ("success", "failure", "unclear")]
+
+
+def _rate_cells(group: list[dict]) -> tuple[int, int, str]:
+    scored = _scored(group)
+    s = sum(a["verdict"] == "success" for a in scored)
+    return s, len(scored), fmt_rate(s, len(scored))
+
+
 def _render_summary(attempts: list[dict]) -> list[str]:
     counts = _verdict_counts(attempts)
-    total = len(attempts)
-    successes = counts.get("success", 0)
-    rate = f"{successes / total:.1%}" if total else "n/a"
-
+    s, n, rate = _rate_cells(attempts)
     lines = [
         "## Summary",
         "",
-        f"**{successes} of {total} attempts succeeded ({rate} success rate).**",
+        f"**{s} of {n} scored attempts succeeded: {rate}** "
+        f"({len(attempts)} attempts run; {len(attempts) - n} errored or unjudged).",
+        "",
+        "*Rates are successes / scored attempts, with 95% Wilson confidence intervals.*",
         "",
     ]
     if counts:
         lines += ["| Verdict | Count |", "| --- | --- |"]
-        for verdict in ("success", "failure", "unclear", "unjudged"):
+        for verdict in ("success", "failure", "unclear", "error", "unjudged"):
             if counts.get(verdict):
                 lines.append(f"| {verdict} | {counts[verdict]} |")
         lines.append("")
@@ -97,17 +109,15 @@ def _render_by_subagent(attempts: list[dict]) -> list[str]:
         return lines + ["No attempts were recorded for this campaign.", ""]
 
     lines += [
-        "| Sub-agent | Attempts | Success | Failure | Unclear | Success rate |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Sub-agent | Attempts | Success | Failure | Unclear | Error | Success rate [95% CI] |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for sub_agent_type in sorted(grouped):
         group = grouped[sub_agent_type]
-        counts = _verdict_counts(group)
-        successes = counts.get("success", 0)
+        c = _verdict_counts(group)
         lines.append(
-            f"| `{sub_agent_type}` | {len(group)} | {successes} | "
-            f"{counts.get('failure', 0)} | {counts.get('unclear', 0)} | "
-            f"{successes / len(group):.1%} |"
+            f"| `{sub_agent_type}` | {len(group)} | {c.get('success', 0)} | {c.get('failure', 0)} | "
+            f"{c.get('unclear', 0)} | {c.get('error', 0) + c.get('unjudged', 0)} | {_rate_cells(group)[2]} |"
         )
     lines.append("")
     return lines
@@ -122,27 +132,26 @@ def _render_owasp_coverage(attempts: list[dict]) -> list[str]:
     lines = [
         "## OWASP LLM Top 10 (2025) Coverage",
         "",
-        "| Category | Name | Attempts | Success | Success rate |",
+        "| Category | Name | Attempts | Success | Success rate [95% CI] |",
         "| --- | --- | --- | --- | --- |",
     ]
     for cat in OWASP_LLM_TOP10.values():
         group = grouped.pop(cat.id, [])
         if group:
-            successes = _verdict_counts(group).get("success", 0)
-            lines.append(
-                f"| {cat.id} | {cat.name} | {len(group)} | {successes} | "
-                f"{successes / len(group):.1%} |"
-            )
+            s, _, rate = _rate_cells(group)
+            lines.append(f"| {cat.id} | {cat.name} | {len(group)} | {s} | {rate} |")
+        elif cat.out_of_scope:
+            lines.append(f"| {cat.id} | {cat.name} | — | — | out of scope: {cat.out_of_scope} |")
         else:
             lines.append(f"| {cat.id} | {cat.name} | 0 | — | not tested |")
     for other in sorted(grouped):  # untagged (pre-taxonomy rows) or unknown ids
         group = grouped[other]
-        successes = _verdict_counts(group).get("success", 0)
-        lines.append(
-            f"| {other} | — | {len(group)} | {successes} | {successes / len(group):.1%} |"
-        )
-    tested = sum(1 for c in OWASP_LLM_TOP10 if any(a.get("owasp_category") == c for a in attempts))
-    lines += ["", f"*{tested} of {len(OWASP_LLM_TOP10)} categories exercised.*", ""]
+        s, _, rate = _rate_cells(group)
+        lines.append(f"| {other} | — | {len(group)} | {s} | {rate} |")
+    testable = [c for c in OWASP_LLM_TOP10.values() if not c.out_of_scope]
+    tested = sum(1 for c in testable if any(a.get("owasp_category") == c.id for a in attempts))
+    lines += ["", f"*{tested} of {len(testable)} black-box-testable categories exercised "
+                  f"({len(OWASP_LLM_TOP10) - len(testable)} out of scope).*", ""]
     return lines
 
 

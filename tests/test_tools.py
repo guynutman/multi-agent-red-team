@@ -116,5 +116,5 @@ def test_report_renders_tool_trace(tmp_path):
     generate_report(storage, cid, str(out))
     text = out.read_text()
     assert "**Tool calls**" in text and "`http_get`" in text
-    assert "| LLM06 | Excessive Agency | 1 | 1 | 100.0% |" in text
+    assert "| LLM06 | Excessive Agency | 1 | 1 | 100.0% [20.7%–100.0%] |" in text
     storage.close()

@@ -11,6 +11,8 @@ class OwaspCategory(NamedTuple):
     id: str
     name: str
     summary: str
+    # None = testable by black-box red-teaming at inference time; otherwise why not.
+    out_of_scope: str | None = None
 
 
 OWASP_LLM_TOP10: dict[str, OwaspCategory] = {
@@ -21,9 +23,11 @@ OWASP_LLM_TOP10: dict[str, OwaspCategory] = {
         OwaspCategory("LLM02", "Sensitive Information Disclosure",
                       "The model reveals PII, credentials, or confidential data."),
         OwaspCategory("LLM03", "Supply Chain",
-                      "Compromised models, datasets, or third-party components."),
+                      "Compromised models, datasets, or third-party components.",
+                      "needs artifact/provenance auditing (model hashes, SBOM, licenses), not prompting"),
         OwaspCategory("LLM04", "Data and Model Poisoning",
-                      "Manipulated training/fine-tuning/embedding data introduces backdoors or bias."),
+                      "Manipulated training/fine-tuning/embedding data introduces backdoors or bias.",
+                      "needs control of training data; RAG-time poisoning is covered under LLM08"),
         OwaspCategory("LLM05", "Improper Output Handling",
                       "Unvalidated model output reaches downstream systems (XSS, SQLi, RCE, SSRF)."),
         OwaspCategory("LLM06", "Excessive Agency",
