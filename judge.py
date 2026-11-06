@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel
 from llm.base import LLMBackend, Message
 from llm.entry import call_llm
-from subagents.base import InjectionSpec
+from subagents.base import InjectionSpec, extract_json_object
 
 # module-level constants
 
@@ -79,12 +79,7 @@ class Judge:
     
     def _parse_verdict(self, text: str) -> Verdict:
         """Extract and validate a Verdict from an LLM response."""
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
-            cleaned = cleaned.rsplit("```", 1)[0]
-        cleaned = cleaned.strip()
-
+        cleaned = extract_json_object(text)
         cleaned = re.sub(r"[\x00-\x1f]", " ", cleaned)
         if not cleaned.startswith("{"):
             raise ValueError(

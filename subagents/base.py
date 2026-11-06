@@ -78,6 +78,19 @@ class AttemptResult:
     extra: dict = field(default_factory=dict)  # sub-agent specific metrics, stored as JSON
 
 
+def extract_json_object(text: str) -> str:
+    """
+    Pull the JSON object out of an LLM reply. Small models often wrap it in prose
+    or a code fence ("Here's the payload: ```{...}```"); take the span from the
+    first '{' to the last '}'. Returns the stripped text unchanged if none found.
+    """
+    cleaned = text.strip()
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+    if start != -1 and end > start:
+        return cleaned[start:end + 1]
+    return cleaned
+
+
 class SubAgent:
     """Base class for all attack sub-agents. Default behavior = single-turn LLM01."""
 
@@ -115,11 +128,7 @@ class SubAgent:
         return call_llm(messages, self.attacker_backend, **config).text
 
     def _parse_spec(self, text: str) -> InjectionSpec:
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
-            cleaned = cleaned.rsplit("```", 1)[0]
-        cleaned = cleaned.strip()
+        cleaned = extract_json_object(text)
         # Raw control chars (incl. newlines inside strings) are invalid JSON; small
         # models emit them often. Replace with a space so words don't run together.
         cleaned = re.sub(r"[\x00-\x1f]", " ", cleaned)
