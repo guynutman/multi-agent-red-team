@@ -1,5 +1,7 @@
 """Ollama backend for local LLMs (Llama 3 8B etc...)."""
+import os
 import time
+
 import httpx
 from llm.base import LLMResponse, Message
 
@@ -9,13 +11,17 @@ class OllamaBackend:
     def __init__(
         self, 
         model: str = "llama3:8b",
-        base_url: str = "http://localhost:11434",
-        timeout_s: float = 120.0,
+        base_url: str | None = None,
+        timeout_s: float | None = None,
         max_retries: int = 3,
     ):
         self.model = model
-        self.base_url = base_url.rstrip("/")
-        self.timeout_s = timeout_s
+        # OLLAMA_HOST lets the same code target a remote/Colab Ollama server.
+        host = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        if not host.startswith("http"):
+            host = f"http://{host}"
+        self.base_url = host.rstrip("/")
+        self.timeout_s = timeout_s or float(os.environ.get("OLLAMA_TIMEOUT_S", "120"))
         self.max_retries = max_retries
         
     def call(self, messages: list[Message], **config) -> LLMResponse:
